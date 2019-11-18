@@ -89,7 +89,7 @@ class Example(QMainWindow):
 class AddCoffeeForm(QDialog):
     def __init__(self, coffee_data=None):
         super().__init__()
-        uic.loadUi('add_coffee_form.ui', self)
+        uic.loadUi('addEditCoffeeForm.ui', self)
         self.setWindowFlag(Qt.WindowContextHelpButtonHint, False)
         self.buttonBox.clicked.connect(self.click_btn_box)
         self.taste_edit_btn.clicked.connect(self.edit_taste)
