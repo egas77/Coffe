@@ -1,15 +1,17 @@
 import sys
 import sqlite3
-from PyQt5 import uic
 from PyQt5.QtWidgets import QApplication, QMainWindow, QDialog
 from PyQt5.QtGui import QFont
 from PyQt5.QtCore import Qt
+from UI.mainForm import Ui_MainWindow
+from UI.addEditCoffeeForm import Ui_AddEditCoffeeForm
+from UI.editTasteForm import Ui_EditTasteForm
 
 
-class Example(QMainWindow):
+class Example(QMainWindow, Ui_MainWindow):
     def __init__(self):
         super().__init__()
-        uic.loadUi('main.ui', self)
+        self.setupUi(self)
         self.html = '''
                 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0//EN" "http://www.w3.org/TR/REC-html40/strict.dtd">
         <html><head><meta name="qrichtext" content="1" /><style type="text/css">
@@ -38,7 +40,7 @@ class Example(QMainWindow):
         if self.listWidget.currentRow() > 0:
             old_row = self.listWidget.currentRow()
         self.listWidget.clear()
-        con = sqlite3.connect('coffee.db')
+        con = sqlite3.connect('data/coffee.db')
         cur = con.cursor()
         data = cur.execute('SELECT * FROM coffes').fetchall()
         titles = sorted(list(map(lambda elem: elem[1], data)))
@@ -52,7 +54,7 @@ class Example(QMainWindow):
         if not item:
             return
         name = item.text()
-        con = sqlite3.connect('coffee.db')
+        con = sqlite3.connect('data/coffee.db')
         cur = con.cursor()
         coffee_data = cur.execute('''
         SELECT name, roaster, ground, taste, price, volume FROM coffes WHERE name = ?''',
@@ -72,24 +74,24 @@ class Example(QMainWindow):
         con.close()
 
     def add_coffee(self):
-        self.edit_form = AddCoffeeForm()
+        self.edit_form = AddEditCoffeeForm()
         self.edit_form.finished.connect(self.load_data_base)
         self.edit_form.exec()
 
     def edit_coffee(self):
-        con = sqlite3.connect('coffee.db')
+        con = sqlite3.connect('data/coffee.db')
         cur = con.cursor()
         coffee_data = cur.execute('SELECT * FROM coffes WHERE name = ?',
                                   (self.listWidget.currentItem().text(),)).fetchone()
-        self.edit_form = AddCoffeeForm(coffee_data)
+        self.edit_form = AddEditCoffeeForm(coffee_data)
         self.edit_form.finished.connect(self.load_data_base)
         self.edit_form.exec()
 
 
-class AddCoffeeForm(QDialog):
+class AddEditCoffeeForm(QDialog, Ui_AddEditCoffeeForm):
     def __init__(self, coffee_data=None):
         super().__init__()
-        uic.loadUi('addEditCoffeeForm.ui', self)
+        self.setupUi(self)
         self.setWindowFlag(Qt.WindowContextHelpButtonHint, False)
         self.buttonBox.clicked.connect(self.click_btn_box)
         self.taste_edit_btn.clicked.connect(self.edit_taste)
@@ -102,7 +104,7 @@ class AddCoffeeForm(QDialog):
             self.id = None
 
     def initUI(self):
-        con = sqlite3.connect('coffee.db')
+        con = sqlite3.connect('data/coffee.db')
         cur = con.cursor()
 
         name = self.coffee_data[1]
@@ -125,7 +127,7 @@ class AddCoffeeForm(QDialog):
         con.close()
 
     def init_roaster_combo_box(self):
-        con = sqlite3.connect('coffee.db')
+        con = sqlite3.connect('data/coffee.db')
         cur = con.cursor()
 
         roasters = cur.execute('SELECT name FROM roasters').fetchall()
@@ -136,7 +138,7 @@ class AddCoffeeForm(QDialog):
     def click_btn_box(self, btn):
         btn_text = btn.text()
         if btn_text == 'OK':
-            con = sqlite3.connect('coffee.db')
+            con = sqlite3.connect('data/coffee.db')
             cur = con.cursor()
 
             name = self.name_lineEdit.text()
@@ -172,10 +174,10 @@ class AddCoffeeForm(QDialog):
         self.taste = new_taste
 
 
-class EditTaste(QDialog):
+class EditTaste(QDialog, Ui_EditTasteForm):
     def __init__(self, enter_edit_taste_func, name_coffee, id=None, old_taste=None):
         super().__init__()
-        uic.loadUi('edit_taste_form.ui', self)
+        self.setupUi(self)
         self.setWindowTitle(name_coffee)
         self.name_label.setText(name_coffee)
         self.setWindowFlag(Qt.WindowContextHelpButtonHint, False)
@@ -191,7 +193,7 @@ class EditTaste(QDialog):
     def click_btn_box(self, btn):
         btn_text = btn.text()
         if btn_text == 'OK':
-            con = sqlite3.connect('coffee.db')
+            con = sqlite3.connect('data/coffee.db')
             cur = con.cursor()
 
             new_taste = self.plainTextEdit.toPlainText()
