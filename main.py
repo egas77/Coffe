@@ -4,8 +4,6 @@ from PyQt5 import uic
 from PyQt5.QtWidgets import QApplication, QMainWindow, QDialog
 from PyQt5.QtGui import QFont
 from PyQt5.QtCore import Qt
-from ui_main import Ui_MainWindow
-from ui_add_coffee_form import Ui_AddCoffeeForm
 
 
 class Example(QMainWindow):
@@ -74,7 +72,9 @@ class Example(QMainWindow):
         con.close()
 
     def add_coffee(self):
-        print('add')
+        self.edit_form = AddCoffeeForm()
+        self.edit_form.finished.connect(self.load_data_base)
+        self.edit_form.exec()
 
     def edit_coffee(self):
         con = sqlite3.connect('coffee.db')
@@ -87,16 +87,19 @@ class Example(QMainWindow):
 
 
 class AddCoffeeForm(QDialog):
-    def __init__(self, coffee_data):
+    def __init__(self, coffee_data=None):
         super().__init__()
         uic.loadUi('add_coffee_form.ui', self)
-        self.coffee_data = coffee_data
-        self.id = coffee_data[0]
         self.setWindowFlag(Qt.WindowContextHelpButtonHint, False)
         self.buttonBox.clicked.connect(self.click_btn_box)
         self.taste_edit_btn.clicked.connect(self.edit_taste)
         self.init_roaster_combo_box()
-        self.initUI()
+        self.coffee_data = coffee_data
+        if coffee_data:
+            self.id = coffee_data[0]
+            self.initUI()
+        else:
+            self.id = None
 
     def initUI(self):
         con = sqlite3.connect('coffee.db')
@@ -145,26 +148,39 @@ class AddCoffeeForm(QDialog):
             volume = self.volume_spinBox.value()
 
             if name and roaster and taste and price and volume:
-                cur.execute('''UPDATE coffes SET name = ?, roaster = ?, ground = ?,
-                price = ?, volume = ? WHERE id = ?''',
-                            (name, roaster, ground, price, volume, self.id,))
+                if self.id:
+                    cur.execute('''UPDATE coffes SET name = ?, roaster = ?, ground = ?, taste = ?,
+                    price = ?, volume = ? WHERE id = ?''',
+                                (name, roaster, ground, self.taste, price, volume, self.id,))
+                else:
+                    cur.execute('''INSERT INTO coffes(name, roaster, ground, taste, price, volume)
+                     VALUES (?, ?, ?, ?, ?, ?)''',
+                                (name, roaster, ground, self.taste, price, volume,))
                 con.commit()
                 con.close()
         self.close()
 
     def edit_taste(self):
-        self.edit_taste_dialog = EditTaste(self.id, self.coffee_data[1], self.taste)
+        if self.coffee_data:
+            self.edit_taste_dialog = EditTaste(self.enter_edit_taste, self.name_lineEdit.text(),
+                                               self.id, self.taste)
+        else:
+            self.edit_taste_dialog = EditTaste(self.enter_edit_taste, self.name_lineEdit.text())
         self.edit_taste_dialog.exec()
+
+    def enter_edit_taste(self, new_taste):
+        self.taste = new_taste
 
 
 class EditTaste(QDialog):
-    def __init__(self, id, name_coffee, old_taste):
+    def __init__(self, enter_edit_taste_func, name_coffee, id=None, old_taste=None):
         super().__init__()
         uic.loadUi('edit_taste_form.ui', self)
         self.setWindowTitle(name_coffee)
         self.name_label.setText(name_coffee)
         self.setWindowFlag(Qt.WindowContextHelpButtonHint, False)
         self.buttonBox.clicked.connect(self.click_btn_box)
+        self.enter_edit_taste_func = enter_edit_taste_func
         self.id = id
 
         font = QFont()
@@ -181,7 +197,7 @@ class EditTaste(QDialog):
             new_taste = self.plainTextEdit.toPlainText()
             if not new_taste:
                 return
-            cur.execute('UPDATE coffes SET taste = ? WHERE id = ?', (new_taste, self.id,))
+            self.enter_edit_taste_func(new_taste)
 
             con.commit()
             con.close()
